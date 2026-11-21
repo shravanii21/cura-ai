@@ -1,3 +1,4 @@
+<<<<<<< HEAD
 <img src="https://github.com/user-attachments/assets/c3b89ac6-7a45-4e73-8d34-5d379cef2c69" alt="Cura App Logo" width="50" height="50">
 
 # 🩺 Cura - Your Personal AI Health Assistant
@@ -91,3 +92,7 @@ If you have any questions or feedback, feel free to reach out via [GitHub Issues
 ---
 
 Built with ❤️ by [Shreyas](https://github.com/Shreyas-29)
+=======
+# cura-ai
+Cura AI is an AI-powered healthcare platform designed to simplify health management through intelligent assistance, health tracking, and personalized insights. Built using Next.js, TypeScript, Prisma, MongoDB, Clerk, and Google Gemini AI.
+>>>>>>> 09e4ed192f8b99e606c73cc338cae7c87c768ad9
