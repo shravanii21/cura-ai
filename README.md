@@ -1,98 +1,115 @@
-<<<<<<< HEAD
-<img src="https://github.com/user-attachments/assets/c3b89ac6-7a45-4e73-8d34-5d379cef2c69" alt="Cura App Logo" width="50" height="50">
+# 🩺 Cura AI – Your Personal AI Health Assistant
 
-# 🩺 Cura - Your Personal AI Health Assistant
+Cura AI is an AI-powered healthcare platform designed to make personal health management easier and smarter. It helps users track their health information, manage symptoms and medications, monitor mental wellness, and interact with an AI-powered health assistant.
 
-<img src="https://github.com/user-attachments/assets/deab03fd-4234-44c3-a6ad-484c4a1a02a1" alt="Cura App Logo">
+Built with modern web technologies and Google Gemini AI, Cura AI aims to provide a simple and user-friendly healthcare experience.
 
-## 🌟 Introduction
-Cura is a cutting-edge AI-powered health assistant designed to help you monitor and manage your well-being. Built with Next.js, Clerk, Stripe, Prisma, and MongoDB, Cura provides real-time insights and personalized recommendations to keep you on top of your health.
+## 🌟 Key Features
 
-## 🚀 Features
+- **AI Health Assistant:** Chat with an AI-powered assistant to get health-related information and general guidance.
+- **Health Tracking:** Keep track of personal health details and health-related information.
+- **Symptom Management:** Add and manage symptoms to maintain a record of your health.
+- **Medication Management:** Store and manage medication information.
+- **Mental Wellness:** Maintain records related to mental well-being.
+- **Secure Authentication:** Sign in and manage your account securely using Clerk.
+- **Personalized Experience:** Get AI assistance using relevant health information provided in your account.
 
-- **Real-time Health Monitoring:** Track your symptoms, medications, and overall wellness in one place.
-- **AI-Powered Chat:** Get instant answers and health tips from your AI assistant.
-- **Premium Features:** Unlock additional tools and functionalities with a one-time payment of $9.
-- **Seamless Integration:** Built with modern tech stack for smooth performance and scalability.
+## 🛠️ Tech Stack
 
-## 🔗 Live Preview
+- **Frontend:** Next.js, React, TypeScript
+- **Styling:** Tailwind CSS, Shadcn UI
+- **Authentication:** Clerk
+- **Database:** MongoDB
+- **ORM:** Prisma
+- **AI Integration:** Google Gemini API
+- **State Management & Data Fetching:** Zustand, TanStack Query
+- **UI & Animations:** Framer Motion, Lucide React
 
-Check out the live demo of Cura here: [Live Preview](http://cura-ai.vercel.app) <!-- Replace with your actual live preview link -->
+## 🚀 Getting Started
 
-## 🎥 Watch Tutorial on YouTube
+Follow these steps to run Cura AI on your local machine.
 
-Check out the tutorial to see how this authentication system was built: [Watch the Tutorial](https://www.youtube.com/watch?v=7ZtF5AlG0SM) 💻
+### 1. Clone the Repository
 
-## 💻 Tech Stack
+```bash
+git clone YOUR_GITHUB_REPOSITORY_URL
+```
 
-* Tailwind CSS
-* Shadcn UI
-* Headless UI
-* Clerk
-* Tanstack Query
-* Framer Motion
-* Stripe
-* Zustand
-* Zod
-* Gemini API
-* Prisma 
-* MongoDB
+Navigate to the project directory:
 
-## 🛠️ Installation
-To run Cura locally, follow these steps:
+```bash
+cd cura-main
+```
 
-1. Clone the repository:
-    ```bash
-    git clone https://github.com/Shreyas-29/cura.git
-    ```
-2. Install dependencies:
-    ```bash
-    pnpm install
-    ```
-3. Set up environment variables in a `.env` file:
-      ```
-     # app
-    NEXT_PUBLIC_APP_NAME=
-    NEXT_PUBLIC_APP_URL=
-    
-    # database
-    DATABASE_URL=
-    
-    # clerk
-    NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
-    CLERK_SECRET_KEY=
-    
-    # google
-    NEXT_PUBLIC_GOOGLE_API_KEY=
-    
-    # stripe
-    STRIPE_SECRET_KEY=
-    NEXT_PUBLIC_STRIPE_PUBLISHABLE_KEY=
-    STRIPE_WEBHOOK_SECRET=
-    ```
-4. Push the Prisma schema:
-    ```bash
-    pnpm dlx prisma db push
-    ```
-5. Run the development server:
-    ```bash
-    pnpm dev
-    ```
+### 2. Install Dependencies
 
-## ☕ Buy Me a Coffee
-If you enjoy using caps.ai, consider supporting my work!  
-[Buy Me a Coffee ☕](https://buymeacoffee.com/shreyas29)
+```bash
+pnpm install
+```
 
-## 📜 License
-This project is licensed under the MIT License. See the [LICENSE](LICENSE) file for details.
+### 3. Configure Environment Variables
 
-## 💬 Contact
-If you have any questions or feedback, feel free to reach out via [GitHub Issues](https://github.com/Shreyas-29/cura/issues).
+Create a `.env` file in the root directory and add the following variables:
 
----
+```env
+# Database
+DATABASE_URL=
 
-Built with ❤️ by [Shreyas](https://github.com/Shreyas-29)
-=======
-# cura-ai
-Cura AI is an AI-powered healthcare platform designed to simplify health management through intelligent assistance, health tracking, and personalized insights. Built using Next.js, TypeScript, Prisma, MongoDB, Clerk, and Google Gemini AI.
->>>>>>> 09e4ed192f8b99e606c73cc338cae7c87c768ad9
+# Clerk Authentication
+NEXT_PUBLIC_CLERK_PUBLISHABLE_KEY=
+CLERK_SECRET_KEY=
+
+# Google Gemini AI
+GOOGLE_API_KEY=
+```
+
+Add your own credentials from MongoDB, Clerk, and Google AI Studio.
+
+### 4. Generate Prisma Client
+
+```bash
+npx prisma generate
+```
+
+### 5. Sync Database Schema
+
+```bash
+npx prisma db push
+```
+
+### 6. Start the Development Server
+
+```bash
+pnpm dev
+```
+
+Open your browser and visit:
+
+```text
+http://localhost:3000
+```
+
+## 📖 How to Use Cura AI
+
+1. **Create an Account:** Sign up or log in using the authentication system.
+2. **Complete Your Profile:** Enter the required personal and health-related information.
+3. **Explore Your Dashboard:** Access your health information and available features.
+4. **Manage Your Health:** Add symptoms, medications, and mental wellness information.
+5. **Chat with Cura AI:** Open the AI assistant and ask health-related questions.
+6. **Review Your Information:** Use your dashboard to keep track of the information you have added.
+
+## ⚠️ Disclaimer
+
+Cura AI is designed for general health information and wellness assistance. It is not a substitute for professional medical advice, diagnosis, or treatment. Always consult a qualified healthcare professional for medical concerns.
+
+## 📄 License
+
+This project is licensed under the MIT License.
+
+## 👩‍💻 Created By
+
+**Shravani Desai | Samruddhi | Astha**
+
+Computer Engineering Students
+
+Built with ❤️ to make healthcare assistance smarter and more accessible.

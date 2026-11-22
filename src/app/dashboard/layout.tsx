@@ -1,15 +1,15 @@
+
 import React from "react";
-import {  DashboardNavbar, Sidebar } from "@/components";
+import { DashboardNavbar, Sidebar } from "@/components";
 import { currentUser } from "@clerk/nextjs/server";
 import { redirect } from "next/navigation";
 import { db } from "@/lib";
 
 interface Props {
-    children: React.ReactNode
+    children: React.ReactNode;
 }
 
 const DashboardLayout = async ({ children }: Props) => {
-
     const user = await currentUser();
 
     if (!user) {
@@ -18,7 +18,7 @@ const DashboardLayout = async ({ children }: Props) => {
 
     const dbUser = await db.user.findUnique({
         where: {
-            id: user?.id,
+            id: user.id,
         },
         include: {
             symptoms: true,
@@ -31,11 +31,9 @@ const DashboardLayout = async ({ children }: Props) => {
         redirect("/onboarding?step=1");
     }
 
-    const isPro = dbUser?.stripeCustomerId ? true : false;
-
     return (
         <main className="mx-auto w-full min-h-screen relative">
-            <DashboardNavbar isPro={isPro} />
+            <DashboardNavbar isPro={false} />
             <Sidebar />
             <div className="sm:pl-20 lg:pl-16 flex flex-col w-full px-2 py-4 lg:p-4">
                 {children}
@@ -44,4 +42,4 @@ const DashboardLayout = async ({ children }: Props) => {
     );
 };
 
-export default DashboardLayout
+export default DashboardLayout;

@@ -71,6 +71,7 @@ enum Stress {
   EXTREMELY
 }
 
+
 model User {
   id        String  @id @default(cuid()) @map("_id")
   clerkId   String  @unique
@@ -86,9 +87,6 @@ model User {
   bloodGroup    String?
   medicalIssues String?
 
-  stripeCustomerId String? @map(name: "stripe_customer_id")
-  stripeInvoiceId  String? @map(name: "stripe_invoice_id")
-
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -97,6 +95,7 @@ model User {
   mentalwellness MentalWellness[]
   messages       Message[]
 }
+
 
 // step 2
 model Symptom {

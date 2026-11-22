@@ -1,3 +1,4 @@
+
 "use client";
 
 import { createMessages } from "@/actions";
@@ -6,26 +7,21 @@ import { generatePrompt } from "@/utils";
 import { Medication, Message, Symptom, User } from "@prisma/client";
 import { useMutation } from "@tanstack/react-query";
 import { BotIcon, LoaderIcon, SendIcon, TriangleAlertIcon } from "lucide-react";
-import { FormEvent, useEffect, useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { cn } from "@/lib";
-import Link from "next/link";
-import { toast } from "sonner";
 
 interface Props {
-    isPro: boolean;
     user: User;
     symptoms: Symptom[];
     medications: Medication[];
     messages: Message[];
 }
 
-const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
-    console.log('isPro', isPro)
-
+const ChatBox = ({ user, symptoms, medications, messages }: Props) => {
     const messagesEndRef = useRef<HTMLDivElement>(null);
 
     const [input, setInput] = useState<string>("");
@@ -44,71 +40,44 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
 
     const { mutate: createUserMessage } = useMutation({
         mutationKey: ["create-user-messages"],
-        mutationFn: async (message: string) => createMessages({ role: "user", message: message }),
+        mutationFn: async (message: string) =>
+            createMessages({ role: "user", message }),
     });
 
     const { mutate: createBotMessage } = useMutation({
         mutationKey: ["create-bot-messages"],
-        mutationFn: async (message: string) => createMessages({ role: "model", message: message }),
+        mutationFn: async (message: string) =>
+            createMessages({ role: "model", message }),
     });
 
-    // const handleSendMessage = async (e: FormEvent) => {
-    //     e.preventDefault();
-
-    //     if (!input.trim()) return;
-
-    //     const newMessages = [...msgs];
-    //     setMsgs(newMessages);
-    //     setInput("");
-    //     setIsLoading(true);
-
-    //     console.log("starting")
-
-    //     try {
-    //         const model = ai.getGenerativeModel({
-    //             model: "gemini-2.5-flash"
-    //         });
-
-    //         const prompt = newMessages.map(message => `${message.role === "USER" ? "User" : "Assistant"}: ${message.content}`).join("\n");
-    //         const result = await model.generateContent(prompt);
-    //         const res = await result.response;
-
-    //         const botMessage = { role: "MODEL", content: res.text() };
-
-    //         createUserMessage(input);
-    //         console.log("created user message")
-    //         createBotMessage(botMessage.content);
-    //         console.log("created bot message")
-
-    //         setMsgs([...newMessages!, { role: "MODEL", content: res.text() }]);
-    //     } catch (error) {
-    //         console.log("Error generating response:", error);
-    //     } finally {
-    //         setIsLoading(false);
-    //     }
-    // };
-
-    const handleSendMessage = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSendMessage = async (
+        e: React.FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
 
         scrollToBottom();
-
-        if (isPro === false && messages.length >= 10) {
-            setError("Message limit reached. Please upgrade to pro.");
-            toast.error("Message limit reached. Please upgrade to pro.");
-            return;
-        }
+        setError("");
 
         if (!input.trim()) return;
 
-        const newMessages = [...msgs, { role: "user", content: input }];
+        const newMessages = [
+            ...msgs,
+            { role: "user", content: input },
+        ];
+
         // @ts-ignore
         setMsgs(newMessages);
+
+        const currentInput = input;
         setInput("");
         setIsLoading(true);
 
         try {
-            const promptText = generatePrompt({ symptoms, medications, user });
+            const promptText = generatePrompt({
+                symptoms,
+                medications,
+                user,
+            });
 
             const model = ai.getGenerativeModel({
                 model: "gemini-3.5-flash-lite",
@@ -116,31 +85,33 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
             });
 
             const chat = model.startChat({
-                history: [
-                    ...newMessages.map((message) => ({
-                        role: message.role,
-                        parts: [{ text: message.content }],
-                    })),
-                ],
+                history: newMessages.map((message) => ({
+                    role: message.role,
+                    parts: [{ text: message.content }],
+                })),
                 generationConfig: {
                     maxOutputTokens: 500,
                     temperature: 0.7,
                 },
             });
 
-            const result = await chat.sendMessage(input);
+            const result = await chat.sendMessage(currentInput);
             const response = result.response;
             const botMessageContent = response.text();
 
-            const botMessage = { role: "model", content: botMessageContent };
+            const botMessage = {
+                role: "model",
+                content: botMessageContent,
+            };
 
-            createUserMessage(input);
+            createUserMessage(currentInput);
             createBotMessage(botMessage.content);
 
             // @ts-ignore
             setMsgs((prev) => [...prev, botMessage]);
         } catch (error) {
-            setError("Error generating response");
+            console.error("Error generating response:", error);
+            setError("Error generating response. Please try again.");
         } finally {
             setIsLoading(false);
         }
@@ -164,12 +135,15 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
                             </p>
                         </div>
                     )}
+
                     {msgs?.map((message, index) => (
                         <div
                             key={index}
                             className={cn(
                                 "flex max-w-lg",
-                                message.role === "user" ? "ml-auto max-w-72 sm:max-w-lg" : "mr-auto"
+                                message.role === "user"
+                                    ? "ml-auto max-w-72 sm:max-w-lg"
+                                    : "mr-auto"
                             )}
                         >
                             {message.role === "user" ? (
@@ -181,7 +155,10 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
                             ) : (
                                 <div className="flex items-start">
                                     <div className="bg-neutral-100 text-foreground text-sm px-4 py-2 rounded-lg">
-                                        <ReactMarkdown remarkPlugins={[remarkGfm]} className="whitespace-pre-line">
+                                        <ReactMarkdown
+                                            remarkPlugins={[remarkGfm]}
+                                            className="whitespace-pre-line"
+                                        >
                                             {message.content}
                                         </ReactMarkdown>
                                     </div>
@@ -189,6 +166,7 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
                             )}
                         </div>
                     ))}
+
                     {isLoading && (
                         <div className="flex flex-col justify-center items-center text-center p-4">
                             <LoaderIcon className="w-5 h-5 animate-spin" />
@@ -197,29 +175,24 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
                             </p>
                         </div>
                     )}
+
                     {!isLoading && error && (
                         <div className="flex flex-col items-center justify-center w-full py-8 h-full">
                             <p className="text-sm text-red-500 bg-red-50 px-4 py-1.5 rounded-md mx-auto font-medium flex items-center">
                                 <TriangleAlertIcon className="w-4 h-4 mr-2" />
                                 {error}
                             </p>
-                            {!isPro && (
-                                <Button
-                                    asChild
-                                    size="sm"
-                                    className="mt-4"
-                                >
-                                    <Link href="/dashboard/account/billing">
-                                        Upgrade to Pro
-                                    </Link>
-                                </Button>
-                            )}
                         </div>
                     )}
+
                     <div ref={messagesEndRef} className="w-full h-px" />
                 </div>
+
                 <div className="w-full rounded-xl fixed sm:sticky bottom-0 inset-x-0 px-2 bg-background">
-                    <form onSubmit={handleSendMessage} className="flex flex-row items-center gap-x-4 rounded-xl py-3 md:px-3">
+                    <form
+                        onSubmit={handleSendMessage}
+                        className="flex flex-row items-center gap-x-4 rounded-xl py-3 md:px-3"
+                    >
                         <Input
                             type="text"
                             value={input}
@@ -228,6 +201,7 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
                             placeholder="Ask about your health..."
                             className="flex-1 min-w-0 focus-visible:ring-0 focus-visible:ring-transparent border"
                         />
+
                         <div className="flex items-center justify-center w-10">
                             <Button
                                 size="iconlg"
@@ -235,14 +209,18 @@ const ChatBox = ({ isPro, user, symptoms, medications, messages }: Props) => {
                                 disabled={isLoading || !input.trim()}
                                 className="flex-shrink-0"
                             >
-                                {isLoading ? <LoaderIcon className="w-5 h-5 animate-spin" /> : <SendIcon className="w-5 h-5" />}
+                                {isLoading ? (
+                                    <LoaderIcon className="w-5 h-5 animate-spin" />
+                                ) : (
+                                    <SendIcon className="w-5 h-5" />
+                                )}
                             </Button>
                         </div>
                     </form>
                 </div>
             </div>
         </div>
-    )
+    );
 };
 
-export default ChatBox
+export default ChatBox;
