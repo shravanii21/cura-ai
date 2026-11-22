@@ -1,8 +1,7 @@
 
 "use client";
 
-import { createMessages } from "@/actions";
-import ai from "@/lib/google";
+import { createMessages, sendChatMessage } from "@/actions";
 import { generatePrompt } from "@/utils";
 import { Medication, Message, Symptom, User } from "@prisma/client";
 import { useMutation } from "@tanstack/react-query";
@@ -27,7 +26,6 @@ const ChatBox = ({ user, symptoms, medications, messages }: Props) => {
     const [input, setInput] = useState<string>("");
     const [error, setError] = useState<string>("");
     const [isLoading, setIsLoading] = useState<boolean>(false);
-
     const [msgs, setMsgs] = useState<Message[]>(messages || []);
 
     const scrollToBottom = () => {
@@ -55,20 +53,20 @@ const ChatBox = ({ user, symptoms, medications, messages }: Props) => {
     ) => {
         e.preventDefault();
 
-        scrollToBottom();
         setError("");
 
         if (!input.trim()) return;
 
-        const newMessages = [
-            ...msgs,
-            { role: "user", content: input },
-        ];
+        const currentInput = input.trim();
+
+        const newUserMessage = {
+            role: "user",
+            content: currentInput,
+        };
 
         // @ts-ignore
-        setMsgs(newMessages);
+        setMsgs((prev) => [...prev, newUserMessage]);
 
-        const currentInput = input;
         setInput("");
         setIsLoading(true);
 
@@ -79,25 +77,16 @@ const ChatBox = ({ user, symptoms, medications, messages }: Props) => {
                 user,
             });
 
-            const model = ai.getGenerativeModel({
-                model: "gemini-3.5-flash-lite",
-                systemInstruction: promptText,
-            });
+            const history = msgs.map((message) => ({
+                role: message.role as "user" | "model",
+                content: message.content,
+            }));
 
-            const chat = model.startChat({
-                history: newMessages.map((message) => ({
-                    role: message.role,
-                    parts: [{ text: message.content }],
-                })),
-                generationConfig: {
-                    maxOutputTokens: 500,
-                    temperature: 0.7,
-                },
+            const botMessageContent = await sendChatMessage({
+                message: currentInput,
+                history,
+                promptText,
             });
-
-            const result = await chat.sendMessage(currentInput);
-            const response = result.response;
-            const botMessageContent = response.text();
 
             const botMessage = {
                 role: "model",
@@ -109,6 +98,7 @@ const ChatBox = ({ user, symptoms, medications, messages }: Props) => {
 
             // @ts-ignore
             setMsgs((prev) => [...prev, botMessage]);
+
         } catch (error) {
             console.error("Error generating response:", error);
             setError("Error generating response. Please try again.");
@@ -127,6 +117,7 @@ const ChatBox = ({ user, symptoms, medications, messages }: Props) => {
         <div className="flex flex-col h-full w-full relative sm:pl-4">
             <div className="flex flex-col md:border rounded-xl h-full w-full">
                 <div className="w-full h-full overflow-y-scroll space-y-4 md:p-4 pb-12 flex flex-col flex-1 scrollbar-hide rounded-xl">
+
                     {!isLoading && !error && msgs?.length === 0 && (
                         <div className="flex flex-col items-center justify-center text-center w-full py-8 h-full">
                             <BotIcon className="w-10 h-10 text-primary" />

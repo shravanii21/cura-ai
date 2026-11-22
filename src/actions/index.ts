@@ -8,6 +8,8 @@ import createMedication from "./create-medication";
 import getHealthTips from "./get-health-tips";
 import getMessags from "./get-messages";
 import getRecommndations from "./get-recommendations";
+import sendChatMessage from "./send-chat-message";
+import getUserDetails from "./get-user-details";
 
 export {
     updateUser,
@@ -17,4 +19,6 @@ export {
     getHealthTips,
     getMessags,
     getRecommndations,
+    sendChatMessage,
+    getUserDetails,
 };

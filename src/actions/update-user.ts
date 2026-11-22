@@ -1,9 +1,16 @@
+
 "use server";
 
 import { db, StepOneSchemaType } from "@/lib";
 import { currentUser } from "@clerk/nextjs/server";
 
-const updateUser = async ({ age, bloodGroup, gender, height, weight }: StepOneSchemaType) => {
+const updateUser = async ({
+    age,
+    bloodGroup,
+    gender,
+    height,
+    weight,
+}: StepOneSchemaType) => {
     const user = await currentUser();
 
     if (!user?.id) {
@@ -13,7 +20,7 @@ const updateUser = async ({ age, bloodGroup, gender, height, weight }: StepOneSc
     try {
         await db.user.update({
             where: {
-                id: user.id,
+                clerkId: user.id,
             },
             data: {
                 age: Number(age),
@@ -24,7 +31,7 @@ const updateUser = async ({ age, bloodGroup, gender, height, weight }: StepOneSc
             },
         });
     } catch (error) {
-        console.error("Error updating user", error);
+        console.error("Error updating user:", error);
         throw new Error("Error updating user");
     }
 };
