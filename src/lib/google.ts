@@ -1,5 +1,12 @@
+
 import { GoogleGenerativeAI } from "@google/generative-ai";
 
-const ai = new GoogleGenerativeAI(process.env.NEXT_PUBLIC_GOOGLE_API_KEY as string);
+const apiKey = process.env.GOOGLE_API_KEY;
+
+if (!apiKey) {
+    throw new Error("GOOGLE_API_KEY is not configured");
+}
+
+const ai = new GoogleGenerativeAI(apiKey);
 
 export default ai;
