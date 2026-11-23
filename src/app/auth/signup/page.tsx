@@ -21,29 +21,55 @@ import {
 import { useSignUp } from "@clerk/nextjs";
 import { Icons } from "@/components";
 
+type SignupMethod = "email" | "phone";
+
 const SignUpPage = () => {
     const router = useRouter();
     const { isLoaded, signUp, setActive } = useSignUp();
 
+    const [signupMethod, setSignupMethod] =
+        useState<SignupMethod>("email");
+
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [code, setCode] = useState("");
+    const [phoneNumber, setPhoneNumber] = useState("");
     const [password, setPassword] = useState("");
+    const [code, setCode] = useState("");
+
     const [isVerified, setIsVerified] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [isVerifying, setIsVerifying] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent) => {
+    const identifier =
+        signupMethod === "email"
+            ? email.trim()
+            : `+91${phoneNumber}`;
+
+    const handleSubmit = async (
+        e: React.FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
 
         if (!isLoaded || !signUp) return;
 
         const trimmedName = name.trim();
-        const trimmedEmail = email.trim();
 
-        if (!trimmedName || !trimmedEmail || !password) {
+        if (!trimmedName || !password) {
             toast.error("Please fill in all fields.");
+            return;
+        }
+
+        if (signupMethod === "email" && !email.trim()) {
+            toast.error("Please enter your email address.");
+            return;
+        }
+
+        if (
+            signupMethod === "phone" &&
+            !/^\d{10}$/.test(phoneNumber)
+        ) {
+            toast.error("Please enter a valid 10-digit phone number.");
             return;
         }
 
@@ -58,18 +84,34 @@ const SignUpPage = () => {
 
         try {
             await signUp.create({
-                emailAddress: trimmedEmail,
+                ...(signupMethod === "email"
+                    ? { emailAddress: identifier }
+                    : { phoneNumber: identifier }),
+
                 password,
                 firstName: nameParts[0],
                 lastName: nameParts.slice(1).join(" "),
             });
 
-            await signUp.prepareEmailAddressVerification({
-                strategy: "email_code",
-            });
+            if (signupMethod === "email") {
+                await signUp.prepareEmailAddressVerification({
+                    strategy: "email_code",
+                });
+            } else {
+                await signUp.preparePhoneNumberVerification({
+                    strategy: "phone_code",
+                    channel: "sms",
+                });
+            }
 
             setIsVerified(true);
-            toast.success("Verification code sent to your email.");
+            setCode("");
+
+            toast.success(
+                signupMethod === "email"
+                    ? "Verification code sent to your email."
+                    : "Verification code sent to your phone."
+            );
 
         } catch (error: any) {
             console.error("SIGN UP ERROR:", error);
@@ -87,7 +129,9 @@ const SignUpPage = () => {
         }
     };
 
-    const handleVerify = async (e: React.FormEvent) => {
+    const handleVerify = async (
+        e: React.FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
 
         if (!isLoaded || !signUp) return;
@@ -100,16 +144,22 @@ const SignUpPage = () => {
         setIsVerifying(true);
 
         try {
-            const result = await signUp.attemptEmailAddressVerification({
-                code: code.trim(),
-            });
+            const result =
+                signupMethod === "email"
+                    ? await signUp.attemptEmailAddressVerification({
+                        code: code.trim(),
+                    })
+                    : await signUp.attemptPhoneNumberVerification({
+                        code: code.trim(),
+                    });
 
             console.log("CLERK SIGNUP RESULT:", result);
 
             if (result.status === "complete") {
                 if (!result.createdSessionId) {
-                    console.error("Missing session ID:", result);
-                    toast.error("Verification completed, but session is missing.");
+                    toast.error(
+                        "Verification completed, but session is missing."
+                    );
                     return;
                 }
 
@@ -123,33 +173,18 @@ const SignUpPage = () => {
                 return;
             }
 
-            const details = result as any;
-
-            console.error("SIGNUP INCOMPLETE DETAILS:", {
-                status: details.status,
-                missingFields: details.missingFields,
-                unverifiedFields: details.unverifiedFields,
+            console.error("SIGNUP INCOMPLETE:", {
+                status: result.status,
+                missingFields: result.missingFields,
+                unverifiedFields: result.unverifiedFields,
             });
 
-            const missing = details.missingFields || [];
-            const unverified = details.unverifiedFields || [];
-
-            if (missing.length > 0) {
-                toast.error(
-                    `Missing information: ${missing.join(", ")}`
-                );
-            } else if (unverified.length > 0) {
-                toast.error(
-                    `Verification pending: ${unverified.join(", ")}`
-                );
-            } else {
-                toast.error(
-                    `Signup incomplete. Status: ${result.status}`
-                );
-            }
+            toast.error(
+                `Signup incomplete. Status: ${result.status}`
+            );
 
         } catch (error: any) {
-            console.error("EMAIL VERIFICATION ERROR:", error);
+            console.error("VERIFICATION ERROR:", error);
 
             const clerkError = error?.errors?.[0];
 
@@ -165,22 +200,26 @@ const SignUpPage = () => {
     };
 
     return isVerified ? (
-        <div className="flex flex-col items-center justify-center h-screen gap-y-6">
+        <div className="flex flex-col items-center justify-center min-h-screen gap-y-6 px-4">
+
             <div className="flex flex-col text-center gap-1">
                 <Link href="/">
                     <Icons.logo className="w-12 h-12 mx-auto" />
                 </Link>
 
                 <h1 className="text-2xl font-bold font-heading mt-2">
-                    Please check your email
+                    Please check your {signupMethod === "email" ? "email" : "phone"}
                 </h1>
 
                 <p className="text-muted-foreground">
-                    We&apos;ve sent a verification code to {email}
+                    We&apos;ve sent a verification code to {identifier}
                 </p>
             </div>
 
-            <form onSubmit={handleVerify} className="w-full max-w-xs">
+            <form
+                onSubmit={handleVerify}
+                className="w-full max-w-xs"
+            >
                 <div className="space-y-2 flex flex-col items-center justify-center">
                     <Label htmlFor="verification-code">
                         Verification Code
@@ -222,7 +261,8 @@ const SignUpPage = () => {
             </form>
         </div>
     ) : (
-        <div className="flex flex-col items-center justify-center h-screen gap-y-6">
+        <div className="flex flex-col items-center justify-center min-h-screen gap-y-6 px-4">
+
             <div className="flex flex-col text-center gap-1">
                 <Link href="/">
                     <Icons.logo className="w-12 h-12 mx-auto" />
@@ -237,7 +277,10 @@ const SignUpPage = () => {
                 </p>
             </div>
 
-            <form onSubmit={handleSubmit} className="w-full max-w-xs">
+            <form
+                onSubmit={handleSubmit}
+                className="w-full max-w-xs"
+            >
                 <div className="space-y-1">
                     <Label htmlFor="name">Full Name</Label>
 
@@ -247,33 +290,114 @@ const SignUpPage = () => {
                         placeholder="Enter your name"
                         value={name}
                         disabled={isLoading}
+                        required
                         onChange={(e) => setName(e.target.value)}
                     />
                 </div>
 
-                <div className="mt-4 space-y-1">
-                    <Label htmlFor="email">Email address</Label>
+                <div className="mt-4 space-y-2">
+                    <Label>Sign up using</Label>
 
-                    <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email address"
-                        value={email}
-                        disabled={isLoading}
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
+                    <div className="grid grid-cols-2 gap-2">
+                        <Button
+                            type="button"
+                            variant={
+                                signupMethod === "email"
+                                    ? "default"
+                                    : "outline"
+                            }
+                            disabled={isLoading}
+                            onClick={() => setSignupMethod("email")}
+                        >
+                            Email
+                        </Button>
+
+                        <Button
+                            type="button"
+                            variant={
+                                signupMethod === "phone"
+                                    ? "default"
+                                    : "outline"
+                            }
+                            disabled={isLoading}
+                            onClick={() => setSignupMethod("phone")}
+                        >
+                            Phone Number
+                        </Button>
+                    </div>
                 </div>
 
+                {signupMethod === "email" ? (
+                    <div className="mt-4 space-y-1">
+                        <Label htmlFor="email">
+                            Email address
+                        </Label>
+
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="Enter your email address"
+                            value={email}
+                            disabled={isLoading}
+                            required
+                            autoComplete="email"
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+                ) : (
+                    <div className="mt-4 space-y-1">
+                        <Label htmlFor="phone">
+                            Phone number
+                        </Label>
+
+                        <div className="flex gap-2">
+                            <div className="w-24">
+                                <Input
+                                    value="+91"
+                                    disabled
+                                    aria-label="Country code"
+                                />
+                            </div>
+
+                            <div className="flex-1">
+                                <Input
+                                    id="phone"
+                                    type="tel"
+                                    placeholder="10-digit number"
+                                    value={phoneNumber}
+                                    disabled={isLoading}
+                                    required
+                                    maxLength={10}
+                                    autoComplete="tel-national"
+                                    onChange={(e) =>
+                                        setPhoneNumber(
+                                            e.target.value
+                                                .replace(/\D/g, "")
+                                                .slice(0, 10)
+                                        )
+                                    }
+                                />
+                            </div>
+                        </div>
+                    </div>
+                )}
+
                 <div className="mt-4 space-y-1">
-                    <Label htmlFor="password">Password</Label>
+                    <Label htmlFor="password">
+                        Password
+                    </Label>
 
                     <div className="relative w-full">
                         <Input
                             id="password"
-                            type={showPassword ? "text" : "password"}
+                            type={
+                                showPassword ? "text" : "password"
+                            }
                             placeholder="Enter your password"
                             value={password}
                             disabled={isLoading}
+                            required
+                            autoComplete="new-password"
                             onChange={(e) => setPassword(e.target.value)}
                         />
 
@@ -283,7 +407,12 @@ const SignUpPage = () => {
                             variant="ghost"
                             disabled={isLoading}
                             className="absolute top-1 right-1 hover:translate-y-0"
-                            onClick={() => setShowPassword(!showPassword)}
+                            onClick={() =>
+                                setShowPassword(!showPassword)
+                            }
+                            aria-label={
+                                showPassword ? "Hide password" : "Show password"
+                            }
                         >
                             {showPassword ? (
                                 <EyeOffIcon className="w-4 h-4" />
@@ -319,7 +448,7 @@ const SignUpPage = () => {
                     Been here before?{" "}
                     <Link
                         href="/auth/signin"
-                        className="text-foreground font-medium"
+                        className="text-foreground font-medium hover:underline"
                     >
                         Sign In
                     </Link>
