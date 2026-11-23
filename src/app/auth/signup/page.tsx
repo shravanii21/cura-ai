@@ -27,7 +27,24 @@ const SignUpPage = () => {
     const [showEmailCode, setShowEmailCode] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
 
-    const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
+    const showIncompleteStatus = (result: any) => {
+        console.error(
+            "Incomplete sign-up details:",
+            JSON.stringify(result, null, 2)
+        );
+
+        console.error("Missing fields:", result.missingFields);
+        console.error("Unverified fields:", result.unverifiedFields);
+        console.error("Required fields:", result.requiredFields);
+
+        toast.error(
+            `Account setup requires another step. Status: ${result.status}`
+        );
+    };
+
+    const handleSignUp = async (
+        e: React.FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
 
         if (!isLoaded || !signUp || !setActive) {
@@ -45,8 +62,8 @@ const SignUpPage = () => {
             return;
         }
 
-        if (password.length < 8) {
-            toast.error("Password must be at least 8 characters.");
+        if (password.length < 15) {
+            toast.error("Password must be at least 15 characters.");
             return;
         }
 
@@ -68,14 +85,17 @@ const SignUpPage = () => {
                 strategy: "email_code",
             });
 
+            setCode("");
             setShowEmailCode(true);
+
             toast.success("Verification code sent to your email.");
 
         } catch (error: any) {
-            console.error("Sign-up error:", error);
+            console.error("Sign-up error details:", error);
 
             toast.error(
                 error.errors?.[0]?.message ||
+                error.message ||
                 "Unable to create account. Please try again."
             );
         } finally {
@@ -83,7 +103,9 @@ const SignUpPage = () => {
         }
     };
 
-    const handleVerifyEmail = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleVerifyEmail = async (
+        e: React.FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
 
         if (!isLoaded || !signUp || !setActive) {
@@ -115,18 +137,27 @@ const SignUpPage = () => {
                 toast.success("Account created successfully!");
 
                 router.replace("/auth/auth-callback");
-            } else {
-                console.error("Incomplete sign-up:", result);
-                toast.error(`Verification incomplete: ${result.status}`);
+                return;
             }
 
-        } catch (error: any) {
-            console.error("Email verification error:", error);
+            showIncompleteStatus(result);
 
-            toast.error(
-                error.errors?.[0]?.message ||
-                "Invalid verification code. Please try again."
-            );
+        } catch (error: any) {
+            console.error("Email verification error details:", error);
+
+            const errorCode = error.errors?.[0]?.code;
+
+            if (errorCode === "verification_already_verified") {
+                toast.error(
+                    "This email is already verified. Please try signing in."
+                );
+            } else {
+                toast.error(
+                    error.errors?.[0]?.message ||
+                    error.message ||
+                    "Email verification failed. Please try again."
+                );
+            }
         } finally {
             setIsLoading(false);
         }
@@ -191,6 +222,7 @@ const SignUpPage = () => {
 
                     <button
                         type="button"
+                        disabled={isLoading}
                         className="text-sm text-muted-foreground hover:underline w-full mt-4"
                         onClick={() => {
                             setShowEmailCode(false);

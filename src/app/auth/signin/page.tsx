@@ -37,7 +37,20 @@ const SignInPage = () => {
         router.replace("/dashboard");
     };
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const showIncompleteStatus = (result: any) => {
+        console.error(
+            "Incomplete sign-in details:",
+            JSON.stringify(result, null, 2)
+        );
+
+        toast.error(
+            `Sign-in requires another step. Status: ${result.status}`
+        );
+    };
+
+    const handleSubmit = async (
+        e: React.FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
 
         if (!isLoaded || !signIn || !setActive) {
@@ -69,8 +82,9 @@ const SignInPage = () => {
                 );
 
                 if (!emailFactor || !("emailAddressId" in emailFactor)) {
+                    showIncompleteStatus(result);
                     toast.error(
-                        "Email verification is not enabled for this account. Check Clerk settings."
+                        "Email verification is not available for this account."
                     );
                     return;
                 }
@@ -80,16 +94,16 @@ const SignInPage = () => {
                     emailAddressId: emailFactor.emailAddressId,
                 });
 
+                setCode("");
                 setShowEmailCode(true);
-                toast.success("Verification code sent to your email.");
+                toast.success("A new verification code has been sent.");
                 return;
             }
 
-            console.error("Incomplete sign-in:", result);
-            toast.error(`Additional verification required: ${result.status}`);
+            showIncompleteStatus(result);
 
         } catch (error: any) {
-            console.error("Sign-in error:", error);
+            console.error("Sign-in error details:", error);
 
             const errorCode = error.errors?.[0]?.code;
 
@@ -109,6 +123,7 @@ const SignInPage = () => {
                 default:
                     toast.error(
                         error.errors?.[0]?.message ||
+                        error.message ||
                         "An error occurred. Please try again."
                     );
             }
@@ -117,7 +132,9 @@ const SignInPage = () => {
         }
     };
 
-    const handleEmailCode = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleEmailCode = async (
+        e: React.FormEvent<HTMLFormElement>
+    ) => {
         e.preventDefault();
 
         if (!isLoaded || !signIn || !setActive) {
@@ -140,16 +157,25 @@ const SignInPage = () => {
 
             if (result.status === "complete") {
                 await finishSignIn(result.createdSessionId);
-            } else {
-                console.error("Incomplete verification:", result);
-                toast.error(`Verification incomplete: ${result.status}`);
+                return;
             }
+
+            showIncompleteStatus(result);
+
         } catch (error: any) {
-            console.error("Verification error:", error);
-            toast.error(
-                error.errors?.[0]?.message ||
-                "Invalid verification code. Please try again."
-            );
+            console.error("Verification error details:", error);
+
+            const errorCode = error.errors?.[0]?.code;
+
+            if (errorCode === "verification_failed") {
+                toast.error("Incorrect verification code. Try the latest code.");
+            } else {
+                toast.error(
+                    error.errors?.[0]?.message ||
+                    error.message ||
+                    "Verification failed. Please try again."
+                );
+            }
         } finally {
             setIsLoading(false);
         }
@@ -211,6 +237,7 @@ const SignInPage = () => {
 
                     <button
                         type="button"
+                        disabled={isLoading}
                         className="text-sm text-muted-foreground hover:underline w-full mt-4"
                         onClick={() => {
                             setShowEmailCode(false);
