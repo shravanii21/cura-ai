@@ -1,25 +1,16 @@
 
 "use client";
 
-import React, { useState } from "react";
-import Link from "next/link";
-import { Label } from "@/components/ui/label";
-import { Input } from "@/components/ui/input";
-import { Button } from "@/components/ui/button";
-import {
-    InputOTP,
-    InputOTPGroup,
-    InputOTPSlot,
-} from "@/components/ui/input-otp";
-import { toast } from "sonner";
-import {
-    EyeIcon,
-    EyeOffIcon,
-    LoaderIcon,
-} from "lucide-react";
-import { useSignUp } from "@clerk/nextjs";
-import { useRouter } from "next/navigation";
 import { Icons } from "@/components";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useSignUp } from "@clerk/nextjs";
+import { EyeIcon, EyeOffIcon, LoaderIcon } from "lucide-react";
+import Link from "next/link";
+import { useRouter } from "next/navigation";
+import React, { useState } from "react";
+import { toast } from "sonner";
 
 const SignUpPage = () => {
     const router = useRouter();
@@ -27,90 +18,94 @@ const SignUpPage = () => {
 
     const [name, setName] = useState("");
     const [email, setEmail] = useState("");
-    const [code, setCode] = useState("");
     const [password, setPassword] = useState("");
+    const [confirmPassword, setConfirmPassword] = useState("");
+    const [code, setCode] = useState("");
 
-    const [isVerified, setIsVerified] = useState(false);
     const [showPassword, setShowPassword] = useState(false);
+    const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+    const [showEmailCode, setShowEmailCode] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
-    const [isVerifying, setIsVerifying] = useState(false);
 
-    const handleSubmit = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleSignUp = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        if (!isLoaded || !signUp) return;
+        if (!isLoaded || !signUp || !setActive) {
+            toast.error("Authentication is not ready. Please try again.");
+            return;
+        }
 
-        const trimmedName = name.trim();
-        const trimmedEmail = email.trim();
-
-        if (!trimmedName || !trimmedEmail || !password) {
+        if (!name.trim() || !email.trim() || !password || !confirmPassword) {
             toast.error("Please fill in all fields.");
             return;
         }
 
-        if (password.length < 8) {
-            toast.error("Password must contain at least 8 characters.");
+        if (password !== confirmPassword) {
+            toast.error("Passwords do not match.");
             return;
         }
 
-        const nameParts = trimmedName.split(/\s+/);
+        if (password.length < 8) {
+            toast.error("Password must be at least 8 characters.");
+            return;
+        }
 
         setIsLoading(true);
 
         try {
+            const nameParts = name.trim().split(/\s+/);
+            const firstName = nameParts[0];
+            const lastName = nameParts.slice(1).join(" ");
+
             await signUp.create({
-                emailAddress: trimmedEmail,
+                emailAddress: email.trim(),
                 password,
-                firstName: nameParts[0],
-                lastName: nameParts.slice(1).join(" "),
+                firstName,
+                lastName,
             });
 
             await signUp.prepareEmailAddressVerification({
                 strategy: "email_code",
             });
 
-            setIsVerified(true);
+            setShowEmailCode(true);
             toast.success("Verification code sent to your email.");
 
         } catch (error: any) {
-            console.error("SIGN UP ERROR:", error);
-
-            const clerkError = error?.errors?.[0];
+            console.error("Sign-up error:", error);
 
             toast.error(
-                clerkError?.longMessage ||
-                clerkError?.message ||
-                error?.message ||
-                "Signup failed. Please try again."
+                error.errors?.[0]?.message ||
+                "Unable to create account. Please try again."
             );
         } finally {
             setIsLoading(false);
         }
     };
 
-    const handleVerify = async (e: React.FormEvent<HTMLFormElement>) => {
+    const handleVerifyEmail = async (e: React.FormEvent<HTMLFormElement>) => {
         e.preventDefault();
 
-        if (!isLoaded || !signUp) return;
-
-        if (code.trim().length !== 6) {
-            toast.error("Please enter the complete 6-digit verification code.");
+        if (!isLoaded || !signUp || !setActive) {
+            toast.error("Authentication is not ready. Please try again.");
             return;
         }
 
-        setIsVerifying(true);
+        if (!code.trim()) {
+            toast.error("Please enter the verification code.");
+            return;
+        }
+
+        setIsLoading(true);
 
         try {
             const result = await signUp.attemptEmailAddressVerification({
                 code: code.trim(),
             });
 
-            console.log("CLERK SIGNUP RESULT:", result);
-
             if (result.status === "complete") {
                 if (!result.createdSessionId) {
-                    toast.error("Verification completed, but session is missing.");
-                    return;
+                    throw new Error("Session could not be created.");
                 }
 
                 await setActive({
@@ -120,43 +115,24 @@ const SignUpPage = () => {
                 toast.success("Account created successfully!");
 
                 router.replace("/auth/auth-callback");
-                return;
-            }
-
-            console.error("SIGNUP INCOMPLETE DETAILS:", {
-                status: result.status,
-                missingFields: result.missingFields,
-                unverifiedFields: result.unverifiedFields,
-            });
-
-            const missing = result.missingFields || [];
-            const unverified = result.unverifiedFields || [];
-
-            if (missing.length > 0) {
-                toast.error(`Missing information: ${missing.join(", ")}`);
-            } else if (unverified.length > 0) {
-                toast.error(`Verification pending: ${unverified.join(", ")}`);
             } else {
-                toast.error(`Signup incomplete. Status: ${result.status}`);
+                console.error("Incomplete sign-up:", result);
+                toast.error(`Verification incomplete: ${result.status}`);
             }
 
         } catch (error: any) {
-            console.error("EMAIL VERIFICATION ERROR:", error);
-
-            const clerkError = error?.errors?.[0];
+            console.error("Email verification error:", error);
 
             toast.error(
-                clerkError?.longMessage ||
-                clerkError?.message ||
-                error?.message ||
-                "Verification failed. Please check your code."
+                error.errors?.[0]?.message ||
+                "Invalid verification code. Please try again."
             );
         } finally {
-            setIsVerifying(false);
+            setIsLoading(false);
         }
     };
 
-    return isVerified ? (
+    return (
         <div className="flex flex-col items-center justify-center min-h-screen gap-y-6 px-4">
 
             <div className="flex flex-col text-center gap-1">
@@ -165,163 +141,206 @@ const SignUpPage = () => {
                 </Link>
 
                 <h1 className="text-2xl font-bold font-heading mt-2">
-                    Please check your email
+                    {showEmailCode ? "Verify Your Email" : "Create Account"}
                 </h1>
 
                 <p className="text-muted-foreground">
-                    We&apos;ve sent a verification code to {email}
+                    {showEmailCode
+                        ? "Enter the verification code sent to your email."
+                        : "Create your Cura AI account to get started."}
                 </p>
             </div>
 
-            <form onSubmit={handleVerify} className="w-full max-w-xs">
-                <div className="space-y-2 flex flex-col items-center justify-center">
-                    <Label htmlFor="verification-code">
-                        Verification Code
-                    </Label>
+            {showEmailCode ? (
+                <form
+                    onSubmit={handleVerifyEmail}
+                    className="w-full max-w-xs"
+                >
+                    <div className="mt-4 space-y-1">
+                        <Label htmlFor="code">Email verification code</Label>
 
-                    <InputOTP
-                        id="verification-code"
-                        maxLength={6}
-                        value={code}
-                        disabled={isVerifying}
-                        onChange={setCode}
-                        className="pt-2"
-                    >
-                        <InputOTPGroup>
-                            <InputOTPSlot index={0} />
-                            <InputOTPSlot index={1} />
-                            <InputOTPSlot index={2} />
-                            <InputOTPSlot index={3} />
-                            <InputOTPSlot index={4} />
-                            <InputOTPSlot index={5} />
-                        </InputOTPGroup>
-                    </InputOTP>
-                </div>
-
-                <div className="mt-6">
-                    <Button
-                        size="default"
-                        type="submit"
-                        disabled={isVerifying || code.length !== 6}
-                        className="w-full"
-                    >
-                        {isVerifying ? (
-                            <LoaderIcon className="w-4 h-4 animate-spin" />
-                        ) : (
-                            "Verify Code"
-                        )}
-                    </Button>
-                </div>
-            </form>
-        </div>
-    ) : (
-        <div className="flex flex-col items-center justify-center min-h-screen gap-y-6 px-4">
-
-            <div className="flex flex-col text-center gap-1">
-                <Link href="/">
-                    <Icons.logo className="w-12 h-12 mx-auto" />
-                </Link>
-
-                <h1 className="text-2xl font-bold font-heading mt-2">
-                    Sign Up
-                </h1>
-
-                <p className="text-muted-foreground">
-                    Create an account to start using Cura AI
-                </p>
-            </div>
-
-            <form onSubmit={handleSubmit} className="w-full max-w-xs">
-                <div className="space-y-1">
-                    <Label htmlFor="name">Full Name</Label>
-
-                    <Input
-                        id="name"
-                        type="text"
-                        placeholder="Enter your name"
-                        value={name}
-                        disabled={isLoading}
-                        required
-                        onChange={(e) => setName(e.target.value)}
-                    />
-                </div>
-
-                <div className="mt-4 space-y-1">
-                    <Label htmlFor="email">Email address</Label>
-
-                    <Input
-                        id="email"
-                        type="email"
-                        placeholder="Enter your email address"
-                        value={email}
-                        disabled={isLoading}
-                        required
-                        onChange={(e) => setEmail(e.target.value)}
-                    />
-                </div>
-
-                <div className="mt-4 space-y-1">
-                    <Label htmlFor="password">Password</Label>
-
-                    <div className="relative w-full">
                         <Input
-                            id="password"
-                            type={showPassword ? "text" : "password"}
-                            placeholder="Enter your password"
-                            value={password}
+                            id="code"
+                            type="text"
+                            inputMode="numeric"
+                            autoComplete="one-time-code"
+                            placeholder="Enter verification code"
+                            value={code}
                             disabled={isLoading}
                             required
-                            onChange={(e) => setPassword(e.target.value)}
+                            onChange={(e) => setCode(e.target.value)}
                         />
+                    </div>
 
+                    <div className="mt-6">
                         <Button
-                            type="button"
-                            size="icon"
-                            variant="ghost"
-                            disabled={isLoading}
-                            className="absolute top-1 right-1 hover:translate-y-0"
-                            onClick={() => setShowPassword(!showPassword)}
+                            type="submit"
+                            disabled={isLoading || !isLoaded}
+                            className="w-full"
                         >
-                            {showPassword ? (
-                                <EyeOffIcon className="w-4 h-4" />
+                            {isLoading ? (
+                                <>
+                                    <LoaderIcon className="w-4 h-4 animate-spin mr-2" />
+                                    Verifying...
+                                </>
                             ) : (
-                                <EyeIcon className="w-4 h-4" />
+                                "Verify Email"
                             )}
                         </Button>
                     </div>
 
-                    <p className="text-xs text-muted-foreground">
-                        Use at least 8 characters for your password.
+                    <button
+                        type="button"
+                        className="text-sm text-muted-foreground hover:underline w-full mt-4"
+                        onClick={() => {
+                            setShowEmailCode(false);
+                            setCode("");
+                        }}
+                    >
+                        Back to Sign Up
+                    </button>
+                </form>
+            ) : (
+                <form
+                    onSubmit={handleSignUp}
+                    className="w-full max-w-xs"
+                >
+                    <div className="mt-4 space-y-1">
+                        <Label htmlFor="name">Full Name</Label>
+
+                        <Input
+                            id="name"
+                            type="text"
+                            placeholder="Enter your full name"
+                            value={name}
+                            disabled={isLoading}
+                            autoComplete="name"
+                            required
+                            onChange={(e) => setName(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="mt-4 space-y-1">
+                        <Label htmlFor="email">Email address</Label>
+
+                        <Input
+                            id="email"
+                            type="email"
+                            placeholder="Enter your email address"
+                            value={email}
+                            disabled={isLoading}
+                            autoComplete="email"
+                            required
+                            onChange={(e) => setEmail(e.target.value)}
+                        />
+                    </div>
+
+                    <div className="mt-4 space-y-1">
+                        <Label htmlFor="password">Password</Label>
+
+                        <div className="relative w-full">
+                            <Input
+                                id="password"
+                                type={showPassword ? "text" : "password"}
+                                placeholder="Create a password"
+                                value={password}
+                                disabled={isLoading}
+                                autoComplete="new-password"
+                                required
+                                onChange={(e) => setPassword(e.target.value)}
+                            />
+
+                            <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                disabled={isLoading}
+                                className="absolute top-1 right-1 hover:translate-y-0"
+                                onClick={() => setShowPassword(!showPassword)}
+                                aria-label={showPassword ? "Hide password" : "Show password"}
+                            >
+                                {showPassword ? (
+                                    <EyeOffIcon className="w-4 h-4" />
+                                ) : (
+                                    <EyeIcon className="w-4 h-4" />
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="mt-4 space-y-1">
+                        <Label htmlFor="confirmPassword">
+                            Confirm Password
+                        </Label>
+
+                        <div className="relative w-full">
+                            <Input
+                                id="confirmPassword"
+                                type={showConfirmPassword ? "text" : "password"}
+                                placeholder="Confirm your password"
+                                value={confirmPassword}
+                                disabled={isLoading}
+                                autoComplete="new-password"
+                                required
+                                onChange={(e) => setConfirmPassword(e.target.value)}
+                            />
+
+                            <Button
+                                type="button"
+                                size="icon"
+                                variant="ghost"
+                                disabled={isLoading}
+                                className="absolute top-1 right-1 hover:translate-y-0"
+                                onClick={() =>
+                                    setShowConfirmPassword(!showConfirmPassword)
+                                }
+                                aria-label={
+                                    showConfirmPassword
+                                        ? "Hide password"
+                                        : "Show password"
+                                }
+                            >
+                                {showConfirmPassword ? (
+                                    <EyeOffIcon className="w-4 h-4" />
+                                ) : (
+                                    <EyeIcon className="w-4 h-4" />
+                                )}
+                            </Button>
+                        </div>
+                    </div>
+
+                    <div className="mt-6">
+                        <Button
+                            type="submit"
+                            disabled={isLoading || !isLoaded}
+                            className="w-full"
+                        >
+                            {isLoading ? (
+                                <>
+                                    <LoaderIcon className="w-4 h-4 animate-spin mr-2" />
+                                    Creating Account...
+                                </>
+                            ) : (
+                                "Create Account"
+                            )}
+                        </Button>
+                    </div>
+                </form>
+            )}
+
+            {!showEmailCode && (
+                <div className="flex mt-2">
+                    <p className="text-sm text-muted-foreground text-center w-full">
+                        Already have an account?{" "}
+                        <Link
+                            href="/auth/signin"
+                            className="text-foreground font-medium hover:underline"
+                        >
+                            Sign In
+                        </Link>
                     </p>
                 </div>
-
-                <div className="mt-6">
-                    <Button
-                        type="submit"
-                        size="default"
-                        disabled={isLoading || !isLoaded}
-                        className="w-full"
-                    >
-                        {isLoading ? (
-                            <LoaderIcon className="w-4 h-4 animate-spin" />
-                        ) : (
-                            "Continue"
-                        )}
-                    </Button>
-                </div>
-            </form>
-
-            <div className="flex mt-2">
-                <p className="text-sm text-muted-foreground text-center w-full">
-                    Been here before?{" "}
-                    <Link
-                        href="/auth/signin"
-                        className="text-foreground font-medium hover:underline"
-                    >
-                        Sign In
-                    </Link>
-                </p>
-            </div>
+            )}
         </div>
     );
 };
