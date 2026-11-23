@@ -9,6 +9,7 @@ import { LoaderIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { toast } from "sonner";
 import { useMediaQuery } from "usehooks-ts";
+import { useRouter } from "next/navigation";
 
 import { getUserDetails, updateUser } from "@/actions";
 import { Button } from "@/components/ui/button";
@@ -58,6 +59,7 @@ const isBloodGroup = (value: string | null): value is BloodGroup => {
 };
 
 const UserDetailsModal = () => {
+    const router = useRouter();
     const { user } = useClerk();
 
     const {
@@ -132,6 +134,7 @@ const UserDetailsModal = () => {
         onSuccess: () => {
             toast.success("Personal details updated successfully!");
             closePersonalDetailsModal();
+            router.refresh();
         },
     });
 
